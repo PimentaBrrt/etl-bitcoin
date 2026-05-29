@@ -1,0 +1,94 @@
+# =====================================================================
+# docker compose up  -> sobe Postgres (DW + metadados) e Airflow standalone
+# ESPM — Data Integration 2026.1 — ETL Bitcoin
+# =====================================================================
+version: "3.9"
+
+services:
+  # ------------------------------------------------------------------
+  # PostgreSQL: serve tanto o Data Warehouse (btc_dw) quanto o
+  # backend de metadados do Airflow (airflow). O script init cria ambos.
+  # ------------------------------------------------------------------
+  postgres:
+    image: postgres:15
+    container_name: btc_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: btc
+      POSTGRES_PASSWORD: btc
+      POSTGRES_DB: btc_dw
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U btc -d btc_dw"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ------------------------------------------------------------------
+  # Airflow standalone (webserver + scheduler em 1 container).
+  # Usa o Postgres acima como backend de metadados.
+  # ------------------------------------------------------------------
+  airflow:
+    build: .
+    image: btc/etl-airflow:1.0
+    container_name: btc_airflow
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # --- Airflow core ---
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://btc:btc@postgres:5432/airflow
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
+      PYTHONPATH: /opt/airflow
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+      # --- Conexão do ETL com o Data Warehouse (lido por etl/config.py) ---
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: btc_dw
+      POSTGRES_USER: btc
+      POSTGRES_PASSWORD: btc
+      # --- Fonte 1: Mercado / Binance (sobrescreva no .env; ver .env.example) ---
+      # Estas sao as variaveis REALMENTE usadas pelo pipeline (etl/config.py:MarketConfig).
+      MARKET_BASE_URL: ${MARKET_BASE_URL:-https://api.binance.com}
+      MARKET_SYMBOL: ${MARKET_SYMBOL:-BTCUSDT}
+      MARKET_START_DATE: ${MARKET_START_DATE:-2018-02-01}
+      MARKET_END_DATE: ${MARKET_END_DATE:-2023-03-31}
+      MARKET_CIRCULATING_SUPPLY: ${MARKET_CIRCULATING_SUPPLY:-19800000}
+      # --- (LEGADO) CoinGecko: nao mais usado pelo pipeline; mantido p/ compat ---
+      COINGECKO_BASE_URL: ${COINGECKO_BASE_URL:-https://api.coingecko.com/api/v3/}
+      COINGECKO_API_KEY: ${COINGECKO_API_KEY:-}
+      COINGECKO_COIN_ID: ${COINGECKO_COIN_ID:-bitcoin}
+      COINGECKO_VS_CURRENCY: ${COINGECKO_VS_CURRENCY:-usd}
+      COINGECKO_DAYS: ${COINGECKO_DAYS:-365}
+      # --- Caminhos ---
+      FNG_CSV_PATH: /opt/airflow/data/seeds/fear_and_greed.csv
+      SQL_SCHEMA_PATH: /opt/airflow/sql/schema.sql
+      SQL_SEED_PATH: /opt/airflow/sql/seed_dim_sentiment.sql
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./etl:/opt/airflow/etl
+      - ./sql:/opt/airflow/sql
+      - ./data:/opt/airflow/data
+      - ./demo_run.py:/opt/airflow/demo_run.py:ro
+    command: standalone
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  pgdata:
