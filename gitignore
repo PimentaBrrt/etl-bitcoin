@@ -1,0 +1,58 @@
+# =====================================================================
+# .gitignore — Pipeline ETL Bitcoin (ESPM Data Integration 2026.1)
+# =====================================================================
+
+# --- Segredos / credenciais ---
+.env
+*.key
+*.pem
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.mypy_cache/
+.ruff_cache/
+
+# --- Ambientes virtuais ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- pytest / cobertura ---
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# --- Docker (overrides locais) ---
+docker-compose.override.yml
+
+# --- Airflow (gerado em execução) ---
+logs/
+airflow.db
+airflow.cfg
+standalone_admin_password.txt
+webserver_config.py
+
+# --- IDEs ---
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Dados gerados / temporários ---
+data/*.duckdb
+data/output/
+*.csv.bak
+*.log
+tmp/
