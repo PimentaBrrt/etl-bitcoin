@@ -1,0 +1,21 @@
+# --- Dados / ETL ---
+# Versoes alinhadas as constraints oficiais do Airflow 2.9.3.
+# pandas 2.2.x + SQLAlchemy 1.4 quebra o pd.read_sql (Engine sem .cursor()).
+pandas==2.1.4
+numpy==1.26.4
+
+# --- Banco de Dados ---
+# IMPORTANTE: Airflow 2.9.3 exige SQLAlchemy < 2.0 (constraint oficial: 1.4.52).
+# Forçar 2.0.x quebra o ORM do Airflow na inicializacao (erro "TaskInstance.dag_model").
+sqlalchemy==1.4.52
+psycopg2-binary==2.9.9
+
+# --- API / HTTP ---
+requests==2.32.3
+tenacity==8.5.0      # retries com backoff exponencial
+
+# --- Logs ---
+loguru==0.7.2
+
+# --- Testes (nice-to-have) ---
+pytest==8.3.2
