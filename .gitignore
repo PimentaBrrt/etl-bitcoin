@@ -8,6 +8,7 @@
 *.pem
 
 # --- Python ---
+etl/__pycache__/
 __pycache__/
 *.py[cod]
 *.pyo

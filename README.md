@@ -208,11 +208,31 @@ fonte 1. Ainda assim, **não comite o `.env`** — ele já está no `.gitignore`
 docker compose up -d --build      # ou: make up
 ```
 
-Aguarde ~40s. A primeira execução baixa as imagens e instala dependências.
+Aguarde ~40s na primeira vez (baixa imagens e instala dependências). Internamente,
+sobem quatro serviços em ordem: `postgres` -> `airflow-init` (migra o banco e cria
+o usuário admin) -> `airflow-webserver` + `airflow-scheduler`.
 
 ### 3. Acesse o Airflow
 
 Abra <http://localhost:8080> · usuário **admin** · senha **admin**.
+
+O usuário admin é criado pelo serviço `airflow-init` na primeira subida. Se você
+não conseguir logar (por exemplo, após um volume antigo ter ficado num estado
+inconsistente), recrie o ambiente do zero:
+
+```bash
+docker compose down -v          # apaga o volume de metadados
+docker compose up -d --build
+```
+
+Como alternativa, é possível (re)criar o usuário admin sem derrubar nada:
+
+```bash
+docker exec -it btc_airflow airflow users create \
+  --username admin --password admin \
+  --firstname Admin --lastname User \
+  --role Admin --email admin@example.com
+```
 
 ### 4. Rode o pipeline
 

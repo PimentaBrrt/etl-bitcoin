@@ -17,7 +17,7 @@ down:                ## Para os containers
 	docker compose down
 
 logs:                ## Tail dos logs do Airflow
-	docker compose logs -f airflow
+	docker compose logs -f airflow-webserver airflow-scheduler
 
 ui:                  ## Abre a UI do Airflow no navegador
 	@( command -v xdg-open >/dev/null && xdg-open http://localhost:8080 ) || \
@@ -25,22 +25,22 @@ ui:                  ## Abre a UI do Airflow no navegador
 	  echo "Acesse manualmente: http://localhost:8080"
 
 run-dag:             ## Dispara a DAG btc_etl_pipeline
-	docker compose exec airflow airflow dags unpause btc_etl_pipeline || true
-	docker compose exec airflow airflow dags trigger btc_etl_pipeline
+	docker compose exec airflow-webserver airflow dags unpause btc_etl_pipeline || true
+	docker compose exec airflow-webserver airflow dags trigger btc_etl_pipeline
 	@echo "DAG disparada. Veja em http://localhost:8080/dags/btc_etl_pipeline/grid"
 
 demo:                ## Roda o pipeline localmente sem Airflow (script unico)
-	docker compose exec airflow python /opt/airflow/demo_run.py
+	docker compose exec airflow-webserver python /opt/airflow/demo_run.py
 
 test:                ## Roda os testes pytest
-	docker compose exec airflow python -m pytest /opt/airflow/etl/../tests -q || \
-	  docker compose run --rm --entrypoint python airflow -m pytest tests -q
+	docker compose exec airflow-webserver python -m pytest /opt/airflow/etl/../tests -q || \
+	  docker compose run --rm --entrypoint python airflow-webserver -m pytest tests -q
 
 psql:                ## Abre o psql no Data Warehouse
 	docker compose exec postgres psql -U btc -d btc_dw
 
 shell:               ## Abre shell no container do Airflow
-	docker compose exec airflow bash
+	docker compose exec airflow-webserver bash
 
 status:              ## Status dos containers
 	docker compose ps
